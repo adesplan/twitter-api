@@ -32,18 +32,37 @@ class TweetResource(Resource):
         data = api.payload
         text = data['text']
         tweet_repository.add(Tweet(text))
-        return "", 201
-
+        return tweet_repository.add(Tweet(text)), 201
 
 
 @api.route('/<int:id>')
 @api.param('id', 'The tweet unique identifier')
 @api.response(404, 'Tweet not found')
 class TweetResource(Resource):
+    @api.doc('get_tweet')
     @api.marshal_with(tweet, code=200)
     def get(self, id):
         tweet_to_return = tweet_repository.get(id)
         if tweet_to_return is None:
             api.abort(404)
-        else:
-            return tweet_to_return, 200
+        return tweet_to_return, 200
+
+    @api.doc('update_tweet')
+    @api.expect(tweet)
+    @api.marshal_with(tweet, code=200)
+    def patch(self, id):
+        tweet_to_return = tweet_repository.get(id)
+        if tweet_to_return is None:
+            api.abort(404)
+        data = api.payload
+        text = data['text']
+        return tweet_repository.update(id, text), 200
+
+    @api.doc('delete_tweet')
+    @api.marshal_with(tweet, code=204)
+    def delete(self, id):
+        tweet_to_return = tweet_repository.get(id)
+        if tweet_to_return is None:
+            api.abort(404)
+        tweet_repository.delete(id)
+        return tweet_to_return, 200
