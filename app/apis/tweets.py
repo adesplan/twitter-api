@@ -2,7 +2,7 @@
 # pylint: disable=missing-docstring
 
 from flask_restx import Namespace, Resource, fields
-from app.db import tweet_repository
+from app import db
 from app.models import Tweet
 
 api = Namespace('tweets')
@@ -20,7 +20,7 @@ class TweetResource(Resource):
     @api.doc('get_tweet')
     @api.marshal_list_with(tweet)
     def get(self):
-        return tweet_repository.tweets, 200
+        return db.session.query(Tweet).all(), 200
 
     @api.doc('create_tweet')
     @api.expect(tweet)
@@ -29,10 +29,11 @@ class TweetResource(Resource):
         """
         Create a new tweet
         """
-        data = api.payload
-        text = data['text']
-        tweet_repository.add(Tweet(text))
-        return tweet_repository.add(Tweet(text)), 201
+        tweet_to_add = Tweet()
+        tweet_to_add.text = api.payload['text']
+        db.session.add(tweet_to_add)
+        db.session.commit()
+        return tweet_to_add, 201
 
 
 @api.route('/<int:id>')
@@ -42,7 +43,7 @@ class TweetResource(Resource):
     @api.doc('get_tweet')
     @api.marshal_with(tweet, code=200)
     def get(self, id):
-        tweet_to_return = tweet_repository.get(id)
+        tweet_to_return = Tweet.query.filter_by(id=id).first()
         if tweet_to_return is None:
             api.abort(404)
         return tweet_to_return, 200
@@ -51,18 +52,20 @@ class TweetResource(Resource):
     @api.expect(tweet)
     @api.marshal_with(tweet, code=200)
     def patch(self, id):
-        tweet_to_return = tweet_repository.get(id)
-        if tweet_to_return is None:
+        tweet_to_patch = Tweet.query.filter_by(id=id).first()
+        if tweet_to_patch is None:
             api.abort(404)
         data = api.payload
-        text = data['text']
-        return tweet_repository.update(id, text), 200
+        tweet_to_patch.text = data['text']
+        db.session.commit()
+        return tweet_to_patch, 200
 
     @api.doc('delete_tweet')
     @api.marshal_with(tweet, code=204)
     def delete(self, id):
-        tweet_to_return = tweet_repository.get(id)
-        if tweet_to_return is None:
+        tweet_to_delete = db.session.query(Tweet).get(id)
+        if tweet_to_delete is None:
             api.abort(404)
-        tweet_repository.delete(id)
-        return tweet_to_return, 200
+        db.session.delete(tweet_to_delete)
+        db.session.commit()
+        return "", 204
