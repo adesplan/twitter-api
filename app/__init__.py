@@ -22,4 +22,5 @@ def create_app():
     api.init_app(app)
 
     app.config['ERROR_404_HELP'] = False
+
     return app
